@@ -6,7 +6,7 @@ import pandas as pd
 import tempfile
 from io import BytesIO
 
-st.title("📄 Invoice Extractor (OCR from PDF)")
+st.title("Invoice Extractor (OCR from PDF)")
 st.write("Upload one or more scanned PDF invoices. The app will extract invoice number, total amount, date, and sender using OCR.")
 
 uploaded_files = st.file_uploader("Upload PDF files", type=["pdf"], accept_multiple_files=True)
@@ -40,7 +40,7 @@ def extract_invoice_data(text):
 if uploaded_files:
     extracted_data = []
 
-    with st.spinner("🔍 Extracting data from uploaded PDFs..."):
+    with st.spinner("Extracting data from uploaded PDFs..."):
         for uploaded_file in uploaded_files:
             text = ocr_from_pdf_bytes(uploaded_file)
             data = extract_invoice_data(text)
@@ -48,9 +48,9 @@ if uploaded_files:
             extracted_data.append(data)
 
     df = pd.DataFrame(extracted_data)
-    st.success("✅ Extraction complete!")
+    st.success("Extraction complete!")
     st.dataframe(df)
 
     csv_buffer = BytesIO()
     df.to_csv(csv_buffer, index=False)
-    st.download_button("📥 Download CSV", csv_buffer.getvalue(), file_name="extracted_invoice_data.csv", mime="text/csv")
+    st.download_button("Download CSV", csv_buffer.getvalue(), file_name="extracted_invoice_data.csv", mime="text/csv")
