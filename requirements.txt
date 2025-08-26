@@ -3,3 +3,6 @@ pytesseract>=0.3.10,<0.4
 pdf2image>=1.16,<2
 pandas>=2.2,<3
 pillow>=10,<11
+tesseract-ocr
+poppler-utils
+
