@@ -3,3 +3,5 @@ pytesseract
 pdf2image
 pandas
 pillow
+tesseract-ocr
+poppler-utils
