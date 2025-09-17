@@ -5,6 +5,7 @@ import re
 import pandas as pd
 import tempfile
 from io import BytesIO
+import concurrent.futures
 
 st.title("Invoice Extractor (OCR from PDF)")
 st.write("Upload one or more scanned PDF invoices. The app will extract invoice number, total amount, date, and sender using OCR.")
@@ -12,7 +13,8 @@ st.write("Upload one or more scanned PDF invoices. The app will extract invoice 
 uploaded_files = st.file_uploader("Upload PDF files", type=["pdf"], accept_multiple_files=True)
 
 def ocr_from_pdf_bytes(pdf_bytes):
-    images = convert_from_bytes(pdf_bytes.read(), dpi=300)
+    # Use a lower DPI to speed up processing (150 DPI should be sufficient for OCR)
+    images = convert_from_bytes(pdf_bytes.read(), dpi=150)
     full_text = ""
     for page_number, page in enumerate(images, start=1):
         text = pytesseract.image_to_string(page, lang='eng', config="--psm 6 --oem 3")
@@ -37,20 +39,33 @@ def extract_invoice_data(text):
         "Sender": sender.group(1).strip() if sender else "Not found"
     }
 
+def process_file(uploaded_file):
+    text = ocr_from_pdf_bytes(uploaded_file)
+    data = extract_invoice_data(text)
+    data['Filename'] = uploaded_file.name
+    return data
+
 if uploaded_files:
     extracted_data = []
 
     with st.spinner("Extracting data from uploaded PDFs..."):
-        for uploaded_file in uploaded_files:
-            text = ocr_from_pdf_bytes(uploaded_file)
-            data = extract_invoice_data(text)
-            data['Filename'] = uploaded_file.name
-            extracted_data.append(data)
+        # Use ThreadPoolExecutor to process files in parallel
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            results = executor.map(process_file, uploaded_files)
+            extracted_data.extend(results)
 
     df = pd.DataFrame(extracted_data)
     st.success("Extraction complete!")
     st.dataframe(df)
 
+    # Generate a dynamic filename based on the first invoice number (or fallback if not found)
+    first_invoice_number = extracted_data[0]["Invoice Number"] if extracted_data else "invoice_data"
+    file_name = f"{first_invoice_number}_invoice_data.csv" if first_invoice_number != "Not found" else "invoice_data.csv"
+
+    # Create CSV in memory
     csv_buffer = BytesIO()
     df.to_csv(csv_buffer, index=False)
-    st.download_button("Download CSV", csv_buffer.getvalue(), file_name="extracted_invoice_data.csv", mime="text/csv")
+    csv_buffer.seek(0)  # Move to the start of the buffer for download
+
+    # Provide the download button with the dynamic filename
+    st.download_button("Download CSV", csv_buffer.getvalue(), file_name=file_name, mime="text/csv")
